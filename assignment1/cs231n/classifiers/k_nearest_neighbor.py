@@ -71,7 +71,9 @@ class KNearestNeighbor(object):
         # training point, and store the result in dists[i, j]. You should   #
         # not use a loop over dimension.                                    #
         #####################################################################
-        pass
+        #计算曼哈顿距离
+        distance = np.sqrt(np.sum(np.square(X[i] - self.X_train[j])))
+        dists[i][j] = distance
         #####################################################################
         #                       END OF YOUR CODE                            #
         #####################################################################
@@ -93,7 +95,8 @@ class KNearestNeighbor(object):
       # Compute the l2 distance between the ith test point and all training #
       # points, and store the result in dists[i, :].                        #
       #######################################################################
-      pass
+      distances = np.sqrt(np.sum(np.square(self.X_train - X[i]), axis=1))
+      dists[i] = distances
       #######################################################################
       #                         END OF YOUR CODE                            #
       #######################################################################
@@ -121,7 +124,18 @@ class KNearestNeighbor(object):
     # HINT: Try to formulate the l2 distance using matrix multiplication    #
     #       and two broadcast sums.                                         #
     #########################################################################
-    pass
+    #注意这里使用numpy.diag()提取矩阵对角线构成特征向量，是因为我们需要的是每个图片数据的平方，而不
+    #需要单个图片数据与其他图片数据的乘积，而矩阵自乘每个图片数据就在对角线上
+    test_square = np.diag(np.dot(X, X.T))
+    train_square = np.diag(np.dot(self.X_train, self.X_train.T))
+    pro = np.dot(X, self.X_train.T)
+    nrow = pro.shape[0]
+    ncol = pro.shape[1]
+    #将特征向量的每个复制nrow个(或ncol个)，再将其构建成M规模的矩阵
+    test_square = np.reshape(np.repeat(test_square, ncol), pro.shape)
+    train_square = np.reshape(np.repeat(train_square, nrow), pro.T.shape)
+    distance_square = test_square + train_square.T - 2*pro
+    dists = np.sqrt(distance_square)
     #########################################################################
     #                         END OF YOUR CODE                              #
     #########################################################################
@@ -153,7 +167,11 @@ class KNearestNeighbor(object):
       # neighbors. Store these labels in closest_y.                           #
       # Hint: Look up the function numpy.argsort.                             #
       #########################################################################
-      pass
+      # 提取每个test样本的对比值数组
+      distances = dists[i,:]
+      # 对distance数组从小到大排序并返回下标
+      index = np.argsort(distances)
+      closest_y = self.y_train[index[:k]]
       #########################################################################
       # TODO:                                                                 #
       # Now that you have found the labels of the k nearest neighbors, you    #
@@ -161,7 +179,9 @@ class KNearestNeighbor(object):
       # Store this label in y_pred[i]. Break ties by choosing the smaller     #
       # label.                                                                #
       #########################################################################
-      pass
+      # 计算出现次数最多的标签
+      counts = np.bincount(closest_y)
+      y_pred[i] = np.argmax(counts)
       #########################################################################
       #                           END OF YOUR CODE                            # 
       #########################################################################
