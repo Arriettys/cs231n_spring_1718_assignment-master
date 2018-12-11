@@ -34,14 +34,19 @@ def svm_loss_naive(W, X, y, reg):
       margin = scores[j] - correct_class_score + 1 # note delta = 1
       if margin > 0:
         loss += margin
+        #计算不等与yi的行的梯度
+        dW[:,j] += X[i]
+        #计算yi行的梯度
+        dW[:,y[i]] -= X[i]
 
   # Right now the loss is a sum over all training examples, but we want it
   # to be an average instead so we divide by num_train.
   loss /= num_train
+  dW /= num_train
 
   # Add regularization to the loss.
   loss += reg * np.sum(W * W)
-
+  dW += reg*W
   #############################################################################
   # TODO:                                                                     #
   # Compute the gradient of the loss function and store it dW.                #
@@ -69,7 +74,19 @@ def svm_loss_vectorized(W, X, y, reg):
   # Implement a vectorized version of the structured SVM loss, storing the    #
   # result in loss.                                                           #
   #############################################################################
-  pass
+  num_train = X.shape[0]
+  num_class = W.shape[1]
+  scores = X.dot(W)
+  # 取出与各样本标签对应的评分
+  correct_class_score = scores[np.arange(num_train), y] 
+  # 将对应评分复制num_class份，再重新构建矩阵
+  correct_class_score = np.reshape(np.repeat(correct_class_score, num_class), scores.shape) 
+  # SVM间隔计算
+  margins = scores - correct_class_score + 1.0
+  margins[np.arange(num_train), y] = 0
+  margins[margins<0] = 0
+  loss = np.sum(margins)/num_train
+  loss += reg*np.sum(W*W)
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
@@ -84,7 +101,16 @@ def svm_loss_vectorized(W, X, y, reg):
   # to reuse some of the intermediate values that you used to compute the     #
   # loss.                                                                     #
   #############################################################################
-  pass
+  # 因为我们只需要计算margin>0的间隔，所以将margin>0的都设为1，其余为0
+  # 一次即一个Xi梯度
+  margins[margins>0] = 1
+  # 因为每计算一个Xi梯度，都有一个（-Xyi)梯度,这里将每行(-Xyi)的总个数
+  row_dnum = np.sum(margins, axis=1)
+  margins[np.arange(num_train), y] = -row_dnum
+  # 再一次性矩阵运算，求出dW
+  dW += X.T.dot(margins)
+  dW /= num_train
+  dW += reg*W
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
