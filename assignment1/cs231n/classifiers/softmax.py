@@ -29,7 +29,27 @@ def softmax_loss_naive(W, X, y, reg):
   # here, it is easy to run into numeric instability. Don't forget the        #
   # regularization!                                                           #
   #############################################################################
-  pass
+  num_train = X.shape[0]
+  num_class = W.shape[1]
+  scores = X.dot(W)
+  maxLogC = np.max(scores, axis=1)
+  maxLogC = -np.reshape(np.repeat(maxLogC, num_class), scores.shape)
+  scoresExp = np.exp(scores + maxLogC)
+  for i in range(num_train):
+    Exp_yi = scoresExp[i, y[i]]
+    Exp_sum = np.sum(scoresExp[i])
+    ls = -np.log(Exp_yi/Exp_sum)
+    loss += ls
+    
+    for j in range(num_class):
+        Exp_j = scoresExp[i, j]
+        dW[:, j] += (Exp_j/Exp_sum)*X[i]
+    dW[:, y[i]] -= X[i]
+  
+  loss /= num_train
+  loss += reg*np.sum(W*W)
+  dW /= num_train
+  dW += reg*W
   #############################################################################
   #                          END OF YOUR CODE                                 #
   #############################################################################
@@ -53,7 +73,23 @@ def softmax_loss_vectorized(W, X, y, reg):
   # here, it is easy to run into numeric instability. Don't forget the        #
   # regularization!                                                           #
   #############################################################################
-  pass
+  num_train = X.shape[0]
+  num_class = W.shape[1]
+  scores = X.dot(W)
+  maxLogC = np.sum(scores, axis=1)
+  maxLogC = -np.reshape(np.repeat(maxLogC, num_class), scores.shape)
+  scoresExp = np.exp(scores + maxLogC)
+  Exp_yi = scoresExp[np.arange(num_train), y]
+  Exp_sum = np.sum(scoresExp, axis=1)
+  loss = np.sum(-np.log(Exp_yi/Exp_sum))
+  Exp_sum = np.reshape(np.repeat(Exp_sum, num_class), scoresExp.shape)
+  Exp_dW = scoresExp/Exp_sum
+  Exp_dW[np.arange(num_train), y] -= 1
+  dW += X.T.dot(Exp_dW)
+  loss /= num_train
+  loss += reg*np.sum(W*W)
+  dW /= num_train
+  dW += reg*W
   #############################################################################
   #                          END OF YOUR CODE                                 #
   #############################################################################
